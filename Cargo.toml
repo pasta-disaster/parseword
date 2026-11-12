@@ -4,3 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+argon2 = { version = "0.6.0", features = [
+    "alloc",
+    "rand_core",
+    #"password-hash",
+] }
+aes-gcm = "0.11"
+rand = "0.8"
+
+#argon2 = "0.5"
+#aes-gcm = "0.10"
+#rand = "0.8"
