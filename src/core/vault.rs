@@ -23,7 +23,12 @@ impl Vault {
         self.is_locked = false;
     }
 
-    pub fn lock(&self) -> Option<&[Entry]> {
+    pub fn lock(&mut self) {
+        self.entries = None;
+        self.is_locked = true;
+    }
+
+    pub fn entries(&self) -> Option<&[Entry]> {
         self.entries.as_deref()
     }
 }
