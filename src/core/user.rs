@@ -21,7 +21,7 @@ impl User {
     }
 
     pub fn get_vault_mut(&mut self, id: &str) -> Option<&mut Vault> {
-        self.vaults.iter_mut.find(|v| v.id == id)
+        self.vaults.iter_mut().find(|v| v.id == id)
     }
 
     pub fn get_vault(&self, id: &str) -> Option<&Vault> {
