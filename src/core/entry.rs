@@ -1,6 +1,8 @@
 // src/core/entry.rs
 
-#[derive(Debug,Clone)]
+use super::field::Field;
+
+#[derive(Debug, Clone)]
 pub struct Entry {
     pub id: String,
     pub title: String,
@@ -11,10 +13,10 @@ pub struct Entry {
 
 impl Entry {
     pub fn new(id: String, title: String) -> Self {
-        let now= std::time::SystemTime::now()
+        let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_secs()
+            .as_secs();
 
         Self {
             id,
@@ -25,8 +27,8 @@ impl Entry {
         }
     }
 
-    pub fn add_filed(&mut self, field: Field) {
-        self.fields.push(field)
+    pub fn add_field(&mut self, field: Field) {
+        self.fields.push(field);
         self.updated_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
