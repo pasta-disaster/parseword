@@ -32,3 +32,30 @@ impl Vault {
         self.entries.as_deref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vault_starts_locked() {
+        let vault = Vault::new("v1".to_string(), "Test Vault".to_string());
+        assert!(vault.is_locked);
+        assert!(vault.entries().is_none());
+    }
+
+    #[test]
+    fn test_vault_unlock_and_lock() {
+        let mut vault = Vault::new("v1".to_string(), "Test Vault".to_string());
+
+        // unlock
+        vault.unlock(Vec::new());
+        assert!(!vault.is_locked);
+        assert!(vault.entries().is_some());
+
+        // lock
+        vault.lock();
+        assert!(vault.is_locked);
+        assert!(vault.entries.is_none());
+    }
+}
