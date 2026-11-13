@@ -5,6 +5,8 @@ use crate::core::vault::Vault;
 use rand::RngCore;
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EncryptedVault {
@@ -63,6 +65,23 @@ pub fn decrypt_vault(encrypted: &EncryptedVault, passphrase: &str) -> Result<Vau
     Ok(vault)
 }
 
+pub fn save_to_file<P: AsRef<Path>>(path: P, encrypted: &EncryptedVault) -> Result<(), String> {
+    let encoded = postcard::to_allocvec(encrypted)
+        .map_err(|e| format!("Failed to encode binary vault file: {}", e))?;
+
+    fs::write(path, encoded).map_err(|e| format!("Failed to write vault file to disk"))
+}
+
+pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<EncryptedVault, String> {
+    let bytes =
+        fs::read(path).map_err(|e| format!("Failed to read vault file from disk: {}", e))?;
+
+    let encrypted: EncryptedVault = postcard::from_bytes(&bytes)
+        .map_err(|e| format!("Failed to decode binary vault file: {}", e))?;
+
+    Ok(encrypted)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,5 +108,25 @@ mod tests {
         let vault = Vault::new("vault-uuid-002", "Locked Vault");
         let result = encrypt_vault(&vault, "some-password");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_file_io_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("vault.bin");
+
+        let mut vault = Vault::new("vault-uuid-file", "File Vault");
+        vault.unlock(vec![]);
+
+        let passphrase = "file-io-passphrase";
+        let encrypted = encrypt_vault(&vault, passphrase).unwrap();
+
+        save_to_file(&file_path, &encrypted).unwrap();
+
+        let loaded_encrypted = load_from_file(&file_path).unwrap();
+        let decrypted = decrypt_vault(&loaded_encrypted, passphrase).unwrap();
+
+        assert_eq!(vault.id, decrypted.id);
+        assert_eq!(vault.name, decrypted.name);
     }
 }
