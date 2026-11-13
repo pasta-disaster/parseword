@@ -1,6 +1,7 @@
 use super::entry::Entry;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Vault {
     pub id: String,
     pub name: String,

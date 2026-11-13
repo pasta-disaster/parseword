@@ -1,6 +1,8 @@
 // src/core/field.rs
 
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FieldValue {
     Text(String),
     Password(String),
@@ -8,7 +10,7 @@ pub enum FieldValue {
     Note(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Field {
     pub id: String,
     pub name: String,

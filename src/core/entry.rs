@@ -1,8 +1,9 @@
 // src/core/entry.rs
 
 use super::field::Field;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Entry {
     pub id: String,
     pub title: String,
