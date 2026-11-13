@@ -10,10 +10,10 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub fn new(id: String, name: String) -> Self {
+    pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
         Self {
-            id,
-            name,
+            id: id.into(),
+            name: name.into(),
             is_locked: true,
             entries: None,
         }
