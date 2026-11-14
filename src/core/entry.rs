@@ -30,6 +30,14 @@ impl Entry {
         self.fields.push(field);
         self.updated_at = current_timestamp();
     }
+
+    pub fn find_field_mut(&mut self, label: &str) -> Option<&mut Field> {
+        self.fields.iter_mut().find(|f| f.label == label)
+    }
+
+    pub fn find_field(&self, label: &str) -> Option<&Field> {
+        self.fields.iter().find(|f| f.label == label)
+    }
 }
 
 fn current_timestamp() -> u64 {
@@ -37,4 +45,31 @@ fn current_timestamp() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::field::FieldValue;
+
+    #[test]
+    fn test_entry_field_management() {
+        let mut entry = Entry::new(
+            "test-service-id",
+            "Test Service",
+            vec![Field::new(
+                "Username",
+                FieldValue::Text("test-username".into()),
+            )],
+        );
+        assert_eq!(entry.fields.len(), 1);
+
+        entry.add_field(Field::new(
+            "Password",
+            FieldValue::Password("test-password".into()),
+        ));
+        assert_eq!(entry.fields.len(), 2);
+
+        assert!(entry.find_field("Password").is_some());
+    }
 }
