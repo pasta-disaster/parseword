@@ -89,6 +89,10 @@ enum Commands {
         #[arg(short, long, value_name = "TYPE=...,LABEL=...,VALUE=...")]
         field_args: Vec<FieldArg>,
     },
+    Dump {
+        #[arg(short, long, default_value = "vault.pwv")]
+        path: PathBuf,
+    },
 }
 
 pub fn run() -> Result<(), String> {
@@ -103,6 +107,7 @@ pub fn run() -> Result<(), String> {
             entry,
             field_args,
         } => handle_add_field(path, entry, field_args),
+        Commands::Dump { path } => handle_dump(path),
     }
 }
 
@@ -145,6 +150,20 @@ fn handle_inspect(path: PathBuf) -> Result<(), String> {
     if !path.exists() {
         return Err(format!("Vault file not found at path: {}", path.display()));
     }
+
+    with_unlocked_vault(&path, |vault| {
+        println!("\n=== Vault unlocked successfully ===");
+        println!("ID:       {}", vault.id);
+        println!("Name:     {}", vault.name);
+        println!("Locked:   {}", vault.is_locked);
+        println!("Entries:  {}", vault.entries().map_or(0, |e| e.len()));
+        println!("=====================================");
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
 
 fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
     if !path.exists() {
@@ -242,6 +261,35 @@ fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> 
 
     println!("Successfully updated entry '{}'.", entry);
     Ok(())
+}
+
+fn handle_dump(path: PathBuf) -> Result<(), String> {
+    with_unlocked_vault(&path, |vault| {
+        let entries = vault
+            .entries()
+            .ok_or("Vault is locked or has no entries".to_string())?;
+
+        println!("\n=== Vault unlocked successfully ===");
+        println!("ID:       {}", vault.id);
+        println!("Name:     {}", vault.name);
+        println!("Locked:   {}", vault.is_locked);
+        println!("Entries:  {}", vault.entries().map_or(0, |e| e.len()));
+        for e in entries {
+            println!("  {} [{}]", e.title, e.fields.len());
+
+            let field_collection: String = e
+                .fields
+                .iter()
+                .map(|f| f.to_string())
+                .collect::<Vec<String>>()
+                .join(", ");
+
+            println!("    {}", field_collection);
+        }
+        println!("=====================================");
+
+        Ok(())
+    })
 }
 
 fn with_unlocked_vault<F>(path: &PathBuf, operation: F) -> Result<(), String>
