@@ -34,6 +34,10 @@ impl Vault {
         self.entries.as_deref()
     }
 
+    pub fn entries_mut(&mut self) -> Option<&mut [Entry]> {
+        self.entries.as_deref_mut()
+    }
+
     pub fn add_entry(&mut self, entry: Entry) -> Result<(), &'static str> {
         match &mut self.entries {
             Some(entries) => {
