@@ -4,6 +4,11 @@ use clap::{Parser, Subcommand};
 use std::io::Write;
 use std::path::PathBuf;
 
+use std::slice::SplitN;
+use std::str::FromStr;
+
+use crate::core::entry::Entry;
+use crate::core::field::{self, Field, FieldValue};
 use crate::core::persistence::{decrypt_vault, encrypt_vault, load_from_file, save_to_file};
 use crate::core::vault::Vault;
 
@@ -13,6 +18,45 @@ use crate::core::vault::Vault;
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+}
+
+#[derive(Debug, Clone)]
+pub struct FieldArg {
+    pub field_type: String,
+    pub label: String,
+    pub value: Option<String>,
+}
+
+impl FromStr for FieldArg {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut field_type = None;
+        let mut label = None;
+        let mut value = None;
+
+        for part in s.split(',') {
+            let mut kv = part.splitn(2, "=");
+            let k = kv
+                .next()
+                .ok_or_else(|| format!("Invalid field format: {}", s))?
+                .trim();
+            let v = kv.next().map(|val| val.trim().to_string());
+
+            match k {
+                "type" => field_type = v,
+                "label" => label = v,
+                "value" => value = v,
+                _ => return Err(format!("Unknown field parameter: {}", k)),
+            }
+        }
+
+        Ok(FieldArg {
+            field_type: field_type.ok_or("Missing 'type' parameter")?,
+            label: label.ok_or("Missing 'label' parameter")?,
+            value,
+        })
+    }
 }
 
 #[derive(Subcommand)]
@@ -29,6 +73,13 @@ enum Commands {
         #[arg(short, long, default_value = "vault.pwv")]
         path: PathBuf,
     },
+    // add an entry to a vault
+    AddEntry {
+        #[arg(short, long, default_value = "vault.pwv")]
+        path: PathBuf,
+        #[arg(short, long)]
+        title: String,
+    },
 }
 
 pub fn run() -> Result<(), String> {
@@ -37,6 +88,7 @@ pub fn run() -> Result<(), String> {
     match cli.command {
         Commands::Init { path, name } => handle_init(path, name),
         Commands::Inspect { path } => handle_inspect(path),
+        Commands::AddEntry { path, title } => handle_add_entry(path, title),
     }
 }
 
@@ -79,6 +131,24 @@ fn handle_inspect(path: PathBuf) -> Result<(), String> {
     if !path.exists() {
         return Err(format!("Vault file not found at path: {}", path.display()));
     }
+
+fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
+    if !path.exists() {
+        return Err(format!("Vault file not found at path: {}", path.display()));
+    }
+
+    if title.is_empty() {
+        return Err("You must provide a title for the entry".to_string());
+    }
+
+    with_unlocked_vault_mut(&path, |vault| {
+        vault.add_entry(Entry::new(uuid_v4_simple(), title, vec![]))?;
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
 
     let encrypted = load_from_file(&path)?;
 
