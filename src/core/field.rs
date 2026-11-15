@@ -1,6 +1,7 @@
 // src/core/field.rs
 
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -18,6 +19,17 @@ pub enum FieldValue {
     Password(String),
     File { filename: String, bytes: Vec<u8> },
     Note(String),
+}
+
+impl Display for FieldValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FieldValue::Text(s) => write!(f, "{}", s),
+            FieldValue::Password(s) => write!(f, "***"),
+            FieldValue::File { filename, bytes } => write!(f, "{}", filename),
+            FieldValue::Note(s) => write!(f, "{}", s),
+        }
+    }
 }
 
 impl Zeroize for FieldValue {
@@ -42,6 +54,12 @@ pub struct Field {
     //    pub id: String,
     pub label: String,
     pub value: FieldValue,
+}
+
+impl Display for Field {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}={}", self.label, self.value)
+    }
 }
 
 impl Field {
