@@ -1,6 +1,7 @@
 // src/cli.rs
 
 use clap::{Parser, Subcommand};
+use std::io::IsTerminal;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -80,6 +81,14 @@ enum Commands {
         #[arg(short, long)]
         title: String,
     },
+    AddField {
+        #[arg(short, long, default_value = "vault.pwv")]
+        path: PathBuf,
+        #[arg(short, long)]
+        entry: String,
+        #[arg(short, long, value_name = "TYPE=...,LABEL=...,VALUE=...")]
+        field_args: Vec<FieldArg>,
+    },
 }
 
 pub fn run() -> Result<(), String> {
@@ -89,6 +98,11 @@ pub fn run() -> Result<(), String> {
         Commands::Init { path, name } => handle_init(path, name),
         Commands::Inspect { path } => handle_inspect(path),
         Commands::AddEntry { path, title } => handle_add_entry(path, title),
+        Commands::AddField {
+            path,
+            entry,
+            field_args,
+        } => handle_add_field(path, entry, field_args),
     }
 }
 
@@ -150,9 +164,86 @@ fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
     Ok(())
 }
 
-    let encrypted = load_from_file(&path)?;
+fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> Result<(), String> {
+    if !path.exists() {
+        return Err(format!("Vault file not found at path: {}", path.display()));
+    }
 
-    let passphrase = rpassword::prompt_password("Enter master passphrase to unlock")
+    if entry.is_empty() {
+        return Err("You must provide an entry to add the field(s) to".to_string());
+    }
+
+    if field_args.is_empty() {
+        return Err("You must provide at least one --field argument".to_string());
+    }
+
+    with_unlocked_vault_mut(&path, |vault| {
+        let entries = vault
+            .entries_mut()
+            .ok_or("Vault is locked or has no entries".to_string())?;
+
+        let target_entry = entries
+            .iter_mut()
+            .find(|e| e.title == entry)
+            .ok_or_else(|| format!("Entry not found: {}", entry))?;
+
+        let is_interactive_terminal = std::io::stdin().is_terminal();
+
+        for arg in field_args {
+            let field_type_lower = arg.field_type.to_lowercase();
+
+            if field_type_lower == "password" && arg.value.is_some() {
+                eprintln!(
+                    "[WARNING] Passing sensitive data like passwords via CLI flags exposes them to shell history and process tables."
+                );
+            }
+
+            let resolved_value = match arg.value {
+                Some(val) => val,
+                // abort if values missing on non-interactive shell
+                None => {
+                    if !is_interactive_terminal {
+                        return Err(format!(
+                            "Non-interactive environment detected, but value was omitted for field {}. Aborting.",
+                            arg.label
+                        ));
+                    }
+
+                    if field_type_lower == "password" {
+                        rpassword::prompt_password(format!("Enter password for {}: ", arg.label))
+                            .map_err(|e| format!("Failed to read password {}", e))?
+                    } else {
+                        print!("Enter value for {}: ", arg.label);
+                        std::io::stdout()
+                            .flush()
+                            .map_err(|e| format!("Failed to flush stdout: {}", e))?;
+
+                        let mut input = String::new();
+                        std::io::stdin()
+                            .read_line(&mut input)
+                            .map_err(|e| format!("Failed to read value {}: ", e))?;
+                        input.trim().to_string()
+                    }
+                }
+            };
+
+            let value = match field_type_lower.as_str() {
+                "text" | "t" => FieldValue::Text(resolved_value),
+                "password" | "p" => FieldValue::Password(resolved_value),
+                "note" | "n" => FieldValue::Note(resolved_value),
+                other => return Err(format!("Unsupported field type: {}", other)),
+            };
+
+            target_entry.add_field(Field::new(arg.label, value));
+        }
+
+        Ok(())
+    })?;
+
+    println!("Successfully updated entry '{}'.", entry);
+    Ok(())
+}
+
 fn with_unlocked_vault<F>(path: &PathBuf, operation: F) -> Result<(), String>
 where
     F: FnOnce(&Vault) -> Result<(), String>,
