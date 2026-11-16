@@ -154,10 +154,6 @@ fn handle_init(path: PathBuf, name: String) -> Result<(), String> {
 }
 
 fn handle_inspect(path: PathBuf) -> Result<(), String> {
-    if !path.exists() {
-        return Err(format!("Vault file not found at path: {}", path.display()));
-    }
-
     with_unlocked_vault(&path, |vault| {
         println!("\n=== Vault unlocked successfully ===");
         println!("ID:       {}", vault.id);
@@ -171,10 +167,6 @@ fn handle_inspect(path: PathBuf) -> Result<(), String> {
 }
 
 fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
-    if !path.exists() {
-        return Err(format!("Vault file not found at path: {}", path.display()));
-    }
-
     if title.is_empty() {
         return Err("You must provide a title for the entry".to_string());
     }
