@@ -47,6 +47,17 @@ impl Vault {
             None => Err("Cannot add entry to a locked vault"),
         }
     }
+
+    pub fn get_entry(&self, title: &str) -> Option<&Entry> {
+        self.entries.as_deref()?.iter().find(|e| e.title == title)
+    }
+
+    pub fn get_entry_mut(&mut self, title: &str) -> Option<&mut Entry> {
+        self.entries
+            .as_deref_mut()?
+            .iter_mut()
+            .find(|e| e.title == title)
+    }
 }
 
 #[cfg(test)]
