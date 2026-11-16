@@ -160,9 +160,7 @@ fn handle_inspect(path: PathBuf) -> Result<(), String> {
         println!("=====================================");
 
         Ok(())
-    })?;
-
-    Ok(())
+    })
 }
 
 fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
@@ -175,12 +173,13 @@ fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
     }
 
     with_unlocked_vault_mut(&path, |vault| {
-        vault.add_entry(Entry::new(uuid_v4_simple(), title, vec![]))?;
+        let entry = Entry::new(uuid_v4_simple(), title.clone(), vec![]);
+        vault.add_entry(entry)?;
+
+        println!("Entry successfully created: {}", title);
 
         Ok(())
-    })?;
-
-    Ok(())
+    })
 }
 
 fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> Result<(), String> {
@@ -256,11 +255,11 @@ fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> 
             target_entry.add_field(Field::new(arg.label, value));
         }
 
+        println!("Successfully updated entry '{}'.", entry);
         Ok(())
-    })?;
+    })
+}
 
-    println!("Successfully updated entry '{}'.", entry);
-    Ok(())
 }
 
 fn handle_dump(path: PathBuf) -> Result<(), String> {
