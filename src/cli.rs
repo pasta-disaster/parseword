@@ -89,6 +89,12 @@ enum Commands {
         #[arg(short, long, value_name = "TYPE=...,LABEL=...,VALUE=...")]
         field_args: Vec<FieldArg>,
     },
+    View {
+        #[arg(short, long, default_value = "vault.pwv")]
+        path: PathBuf,
+        #[arg(short, long)]
+        entry: String,
+    },
     Dump {
         #[arg(short, long, default_value = "vault.pwv")]
         path: PathBuf,
@@ -107,6 +113,7 @@ pub fn run() -> Result<(), String> {
             entry,
             field_args,
         } => handle_add_field(path, entry, field_args),
+        Commands::View { path, entry } => handle_view(path, entry),
         Commands::Dump { path } => handle_dump(path),
     }
 }
@@ -272,6 +279,20 @@ fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> 
     })
 }
 
+fn handle_view(path: PathBuf, entry: String) -> Result<(), String> {
+    if entry.is_empty() {
+        return Err("You must provide an entry".to_string());
+    }
+
+    with_unlocked_vault(&path, |vault| {
+        let target_entry = vault
+            .get_entry(&entry)
+            .ok_or_else(|| format!("Entry not found: {}", entry))?;
+
+        println!("{}", target_entry);
+
+        Ok(())
+    })
 }
 
 fn handle_dump(path: PathBuf) -> Result<(), String> {
