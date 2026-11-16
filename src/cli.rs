@@ -190,10 +190,6 @@ fn handle_add_entry(path: PathBuf, title: String) -> Result<(), String> {
 }
 
 fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> Result<(), String> {
-    if !path.exists() {
-        return Err(format!("Vault file not found at path: {}", path.display()));
-    }
-
     if entry.is_empty() {
         return Err("You must provide an entry to add the field(s) to".to_string());
     }
@@ -203,13 +199,8 @@ fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> 
     }
 
     with_unlocked_vault_mut(&path, |vault| {
-        let entries = vault
-            .entries_mut()
-            .ok_or("Vault is locked or has no entries".to_string())?;
-
-        let target_entry = entries
-            .iter_mut()
-            .find(|e| e.title == entry)
+        let target_entry = vault
+            .get_entry_mut(&entry)
             .ok_or_else(|| format!("Entry not found: {}", entry))?;
 
         let is_interactive_terminal = std::io::stdin().is_terminal();
@@ -307,16 +298,7 @@ fn handle_dump(path: PathBuf) -> Result<(), String> {
         println!("Locked:   {}", vault.is_locked);
         println!("Entries:  {}", vault.entries().map_or(0, |e| e.len()));
         for e in entries {
-            println!("  {} [{}]", e.title, e.fields.len());
-
-            let field_collection: String = e
-                .fields
-                .iter()
-                .map(|f| f.to_string())
-                .collect::<Vec<String>>()
-                .join(", ");
-
-            println!("    {}", field_collection);
+            println!("{}", e);
         }
         println!("=====================================");
 
