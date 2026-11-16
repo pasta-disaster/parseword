@@ -325,7 +325,7 @@ where
         return Err(format!("Vault file not found at path: {}", path.display()));
     }
 
-    let passphrase = rpassword::prompt_password("Enter master passphrase")
+    let passphrase = rpassword::prompt_password("Enter master passphrase: ")
         .map_err(|e| format!("Failed to read passphrase: {}", e))?;
 
     let encrypted = load_from_file(&path)?;
@@ -344,7 +344,7 @@ where
         return Err(format!("Vault file not found at path: {}", path.display()));
     }
 
-    let passphrase = rpassword::prompt_password("Enter master passphrase")
+    let passphrase = rpassword::prompt_password("Enter master passphrase: ")
         .map_err(|e| format!("Failed to read passphrase: {}", e))?;
 
     let encrypted = load_from_file(&path)?;
