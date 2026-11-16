@@ -2,6 +2,7 @@
 
 use super::field::Field;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Zeroize, ZeroizeOnDrop)]
@@ -11,6 +12,30 @@ pub struct Entry {
     pub fields: Vec<Field>,
     pub created_at: u64,
     pub updated_at: u64,
+}
+
+impl Display for Entry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "=== Entry: {} ===", self.title)?;
+
+        if self.fields.is_empty() {
+            writeln!(f, "(no fields)")?;
+            return Ok(());
+        }
+
+        let max_len = self
+            .fields
+            .iter()
+            .map(|field| field.label.len())
+            .max()
+            .unwrap_or(0);
+
+        for field in &self.fields {
+            field.fmt_padded(f, max_len)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl Entry {
