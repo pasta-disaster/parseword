@@ -249,6 +249,18 @@ fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> 
                 "text" | "t" => FieldValue::Text(resolved_value),
                 "password" | "p" => FieldValue::Password(resolved_value),
                 "note" | "n" => FieldValue::Note(resolved_value),
+                "file" | "f" => {
+                    let file_path = std::path::Path::new(&resolved_value);
+                    let filename = file_path
+                        .file_name()
+                        .ok_or_else(|| format!("Invalid file path: {}", resolved_value))?
+                        .to_string_lossy()
+                        .into_owned();
+                    let bytes = std::fs::read(file_path).map_err(|e| {
+                        format!("Failed to read file at '{}': {}", file_path.display(), e)
+                    })?;
+                    FieldValue::File { filename, bytes }
+                }
                 other => return Err(format!("Unsupported field type: {}", other)),
             };
 
