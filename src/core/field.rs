@@ -1,7 +1,8 @@
 // src/core/field.rs
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -25,7 +26,7 @@ impl Display for FieldValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FieldValue::Text(s) => write!(f, "{}", s),
-            FieldValue::Password(s) => write!(f, "***"),
+            FieldValue::Password(_) => write!(f, "***"),
             FieldValue::File { filename, bytes } => write!(f, "{}", filename),
             FieldValue::Note(s) => write!(f, "{}", s),
         }
@@ -68,6 +69,25 @@ impl Field {
             label: label.into(),
             value,
         }
+    }
+
+    pub fn fmt_padded(&self, f: &mut Formatter<'_>, label_width: usize) -> fmt::Result {
+        let value_str = match &self.value {
+            FieldValue::Text(v) => v.clone(),
+            FieldValue::Password(_) => "*****".to_string(),
+            FieldValue::Note(v) => v.clone(),
+            FieldValue::File { filename, bytes } => {
+                format!("file {} ({} bytes)", filename, bytes.len())
+            }
+        };
+
+        writeln!(
+            f,
+            "  {:<width$} = {}",
+            self.label,
+            value_str,
+            width = label_width
+        )
     }
 }
 
