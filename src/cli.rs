@@ -74,6 +74,10 @@ enum Commands {
         #[arg(short, long, default_value = "vault.pwv")]
         path: PathBuf,
     },
+    List {
+        #[arg(short, long, default_value = "vault.pwv")]
+        path: PathBuf,
+    },
     // add an entry to a vault
     AddEntry {
         #[arg(short, long, default_value = "vault.pwv")]
@@ -107,6 +111,7 @@ pub fn run() -> Result<(), String> {
     match cli.command {
         Commands::Init { path, name } => handle_init(path, name),
         Commands::Inspect { path } => handle_inspect(path),
+        Commands::List { path } => handle_list(path),
         Commands::AddEntry { path, title } => handle_add_entry(path, title),
         Commands::AddField {
             path,
@@ -161,6 +166,20 @@ fn handle_inspect(path: PathBuf) -> Result<(), String> {
         println!("Locked:   {}", vault.is_locked);
         println!("Entries:  {}", vault.entries().map_or(0, |e| e.len()));
         println!("=====================================");
+
+        Ok(())
+    })
+}
+
+fn handle_list(path: PathBuf) -> Result<(), String> {
+    with_unlocked_vault(&path, |vault| {
+        let entries = vault
+            .entries()
+            .ok_or("Vault is locked or has no entries".to_string())?;
+
+        for e in entries {
+            println!("  {}", e.title);
+        }
 
         Ok(())
     })
