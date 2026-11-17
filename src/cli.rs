@@ -1,6 +1,8 @@
 // src/cli.rs
 
+use clap::ValueEnum;
 use clap::{Parser, Subcommand};
+use serde::{Deserialize, Serialize};
 use std::io::IsTerminal;
 use std::io::Write;
 use std::path::PathBuf;
@@ -17,8 +19,74 @@ use crate::core::vault::Vault;
 #[command(name = "parseword")]
 #[command(about = "A secure, local Rust password manager", long_about = None)]
 struct Cli {
+    #[arg(short = 'o', long, value_enum, default_value_t = OutputFormat::Text, global = true)]
+    pub format: OutputFormat,
     #[command(subcommand)]
     command: Commands,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum OutputFormat {
+    Text,
+    Json,
+    Yaml,
+}
+
+#[derive(Serialize)]
+pub struct VaultInspectDto<'a> {
+    pub id: &'a str,
+    pub name: &'a str,
+    pub is_locked: bool,
+    pub entry_count: usize,
+}
+
+#[derive(Serialize)]
+pub struct EntrySummaryDto<'a> {
+    pub id: &'a str,
+    pub title: &'a str,
+    pub field_count: usize,
+}
+
+#[derive(Serialize)]
+pub struct EntryDetailDto<'a> {
+    pub id: &'a str,
+    pub title: &'a str,
+    pub fields: Vec<FieldDto<'a>>,
+}
+
+#[derive(Serialize)]
+pub struct FieldDto<'a> {
+    pub label: &'a str,
+    #[serde(rename = "type")]
+    pub field_type: &'a str,
+    pub value: String,
+}
+
+impl<'a> From<&'a Field> for FieldDto<'a> {
+    fn from(field: &'a Field) -> Self {
+        match &field.value {
+            FieldValue::Text(v) => FieldDto {
+                label: &field.label,
+                field_type: "text",
+                value: v.clone(),
+            },
+            FieldValue::Password(v) => FieldDto {
+                label: &field.label,
+                field_type: "password",
+                value: v.clone(),
+            },
+            FieldValue::Note(v) => FieldDto {
+                label: &field.label,
+                field_type: "note",
+                value: v.clone(),
+            },
+            FieldValue::File { filename, bytes } => FieldDto {
+                label: &field.label,
+                field_type: "file",
+                value: format!("{} ({} bytes)", filename, bytes.len()),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -110,15 +178,15 @@ pub fn run() -> Result<(), String> {
 
     match cli.command {
         Commands::Init { path, name } => handle_init(path, name),
-        Commands::Inspect { path } => handle_inspect(path),
-        Commands::List { path } => handle_list(path),
+        Commands::Inspect { path } => handle_inspect(path, cli.format),
+        Commands::List { path } => handle_list(path, cli.format),
         Commands::AddEntry { path, title } => handle_add_entry(path, title),
         Commands::AddField {
             path,
             entry,
             field_args,
         } => handle_add_field(path, entry, field_args),
-        Commands::View { path, entry } => handle_view(path, entry),
+        Commands::View { path, entry } => handle_view(path, entry, cli.format),
         Commands::Dump { path } => handle_dump(path),
     }
 }
@@ -158,30 +226,53 @@ fn handle_init(path: PathBuf, name: String) -> Result<(), String> {
     Ok(())
 }
 
-fn handle_inspect(path: PathBuf) -> Result<(), String> {
+fn handle_inspect(path: PathBuf, format: OutputFormat) -> Result<(), String> {
     with_unlocked_vault(&path, |vault| {
-        println!("\n=== Vault unlocked successfully ===");
-        println!("ID:       {}", vault.id);
-        println!("Name:     {}", vault.name);
-        println!("Locked:   {}", vault.is_locked);
-        println!("Entries:  {}", vault.entries().map_or(0, |e| e.len()));
-        println!("=====================================");
+        let dto = VaultInspectDto {
+            id: &vault.id,
+            name: &vault.name,
+            is_locked: vault.is_locked,
+            entry_count: vault.entries().map_or(0, |e| e.len()),
+        };
 
-        Ok(())
+        render_output(format, &dto, || {
+            println!("\n=== Vault unlocked successfully ===");
+            println!("ID:       {}", vault.id);
+            println!("Name:     {}", vault.name);
+            println!("Locked:   {}", vault.is_locked);
+            println!("Entries:  {}", vault.entries().map_or(0, |e| e.len()));
+            println!("=====================================");
+
+            Ok(())
+        })
     })
 }
 
-fn handle_list(path: PathBuf) -> Result<(), String> {
+fn handle_list(path: PathBuf, format: OutputFormat) -> Result<(), String> {
     with_unlocked_vault(&path, |vault| {
-        let entries = vault
-            .entries()
-            .ok_or("Vault is locked or has no entries".to_string())?;
+        let entries = vault.entries().unwrap_or(&[]);
 
-        for e in entries {
-            println!("  {}", e.title);
-        }
+        let dtos: Vec<EntrySummaryDto> = entries
+            .iter()
+            .map(|e| EntrySummaryDto {
+                id: &e.id,
+                title: &e.title,
+                field_count: e.fields.len(),
+            })
+            .collect();
 
-        Ok(())
+        render_output(format, &dtos, || {
+            if entries.is_empty() {
+                println!("Vault contains no entries.");
+                return Ok(());
+            }
+
+            println!("\n=== Vault Entries ({}) ===", entries.len());
+            for (i, entry) in entries.iter().enumerate() {
+                println!("  {:2}, {}", i + 1, entry.title);
+            }
+            Ok(())
+        })
     })
 }
 
@@ -281,7 +372,7 @@ fn handle_add_field(path: PathBuf, entry: String, field_args: Vec<FieldArg>) -> 
     })
 }
 
-fn handle_view(path: PathBuf, entry: String) -> Result<(), String> {
+fn handle_view(path: PathBuf, entry: String, format: OutputFormat) -> Result<(), String> {
     if entry.is_empty() {
         return Err("You must provide an entry".to_string());
     }
@@ -291,9 +382,16 @@ fn handle_view(path: PathBuf, entry: String) -> Result<(), String> {
             .get_entry(&entry)
             .ok_or_else(|| format!("Entry not found: {}", entry))?;
 
-        println!("{}", target_entry);
+        let dto = EntryDetailDto {
+            id: &target_entry.id,
+            title: &target_entry.title,
+            fields: target_entry.fields.iter().map(FieldDto::from).collect(),
+        };
 
-        Ok(())
+        render_output(format, &dto, || {
+            println!("{}", target_entry);
+            Ok(())
+        })
     })
 }
 
@@ -369,4 +467,26 @@ fn uuid_v4_simple() -> String {
         rng.r#gen::<u16>(),
         rng.r#gen::<u64>() & 0x0000_ffff_ffff_ffff
     )
+}
+
+pub fn render_output<T, F>(format: OutputFormat, data: &T, text_renderer: F) -> Result<(), String>
+where
+    T: Serialize,
+    F: FnOnce() -> Result<(), String>,
+{
+    match format {
+        OutputFormat::Text => text_renderer(),
+        OutputFormat::Json => {
+            let json = serde_json::to_string_pretty(data)
+                .map_err(|e| format!("Failed to serialise output to JSON: {}", e))?;
+            println!("{}", json);
+            Ok(())
+        }
+        OutputFormat::Yaml => {
+            let yaml = serde_yml::to_string(data)
+                .map_err(|e| format!("Failed to serialise output to YAML: {}", e))?;
+            println!("{}", yaml);
+            Ok(())
+        }
+    }
 }
