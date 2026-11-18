@@ -1,6 +1,6 @@
 // src/cli/dto.rs
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::core::field::{Field, FieldValue};
 

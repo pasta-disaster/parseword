@@ -3,7 +3,7 @@
 use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::cli::args::{FieldArg, OutputFormat};
 use crate::cli::dto::{
@@ -298,7 +298,6 @@ pub fn handle_add_field(
         resolved_fields.push(Field::new(arg.label, value));
     }
 
-    let entry_title = entry.clone();
     let updated_entry_data = with_unlocked_vault_mut(&path, |vault| {
         let target_entry = vault
             .get_entry_mut(&entry)
