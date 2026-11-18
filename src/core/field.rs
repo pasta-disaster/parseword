@@ -27,7 +27,9 @@ impl Display for FieldValue {
         match self {
             FieldValue::Text(s) => write!(f, "{}", s),
             FieldValue::Password(_) => write!(f, "***"),
-            FieldValue::File { filename, bytes } => write!(f, "{}", filename),
+            FieldValue::File { filename, bytes } => {
+                write!(f, "{} ({} bytes)", filename, bytes.len())
+            }
             FieldValue::Note(s) => write!(f, "{}", s),
         }
     }

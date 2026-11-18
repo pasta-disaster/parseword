@@ -69,7 +69,7 @@ pub fn save_to_file<P: AsRef<Path>>(path: P, encrypted: &EncryptedVault) -> Resu
     let encoded = postcard::to_allocvec(encrypted)
         .map_err(|e| format!("Failed to encode binary vault file: {}", e))?;
 
-    fs::write(path, encoded).map_err(|e| format!("Failed to write vault file to disk"))
+    fs::write(path, encoded).map_err(|e| format!("Failed to write vault file to disk: {}", e))
 }
 
 pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<EncryptedVault, String> {
