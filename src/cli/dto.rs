@@ -20,6 +20,12 @@ pub struct EntrySummaryDto<'a> {
 }
 
 #[derive(Serialize)]
+pub struct EntryCreatedDto<'a> {
+    pub id: &'a str,
+    pub title: &'a str,
+}
+
+#[derive(Serialize)]
 pub struct EntryDetailDto<'a> {
     pub id: &'a str,
     pub title: &'a str,
@@ -59,4 +65,11 @@ impl<'a> From<&'a Field> for FieldDto<'a> {
             },
         }
     }
+}
+
+#[derive(Serialize)]
+pub struct VaultInitDto<'a> {
+    pub id: &'a str,
+    pub name: &'a str,
+    pub path: String,
 }
