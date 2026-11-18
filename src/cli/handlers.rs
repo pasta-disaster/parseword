@@ -14,9 +14,9 @@ use crate::core::vault::Vault;
 
 // helpers
 
-fn with_unlocked_vault<F>(path: &PathBuf, operation: F) -> Result<(), String>
+fn with_unlocked_vault<F, T>(path: &PathBuf, operation: F) -> Result<T, String>
 where
-    F: FnOnce(&Vault) -> Result<(), String>,
+    F: FnOnce(&Vault) -> Result<T, String>,
 {
     if !path.exists() {
         return Err(format!("Vault file not found at path: {}", path.display()));
@@ -28,14 +28,14 @@ where
     let encrypted = load_from_file(&path)?;
     let vault = decrypt_vault(&encrypted, &passphrase)?;
 
-    operation(&vault)?;
+    let output = operation(&vault)?;
 
-    Ok(())
+    Ok(output)
 }
 
-fn with_unlocked_vault_mut<F>(path: &PathBuf, operation: F) -> Result<(), String>
+fn with_unlocked_vault_mut<F, T>(path: &PathBuf, operation: F) -> Result<T, String>
 where
-    F: FnOnce(&mut Vault) -> Result<(), String>,
+    F: FnOnce(&mut Vault) -> Result<T, String>,
 {
     if !path.exists() {
         return Err(format!("Vault file not found at path: {}", path.display()));
@@ -47,12 +47,12 @@ where
     let encrypted = load_from_file(&path)?;
     let mut vault = decrypt_vault(&encrypted, &passphrase)?;
 
-    operation(&mut vault)?;
+    let output = operation(&mut vault)?;
 
     let updated_encrypted = encrypt_vault(&vault, &passphrase)?;
     save_to_file(path, &updated_encrypted)?;
 
-    Ok(())
+    Ok(output)
 }
 
 fn uuid_v4_simple() -> String {
