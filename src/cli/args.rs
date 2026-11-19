@@ -94,6 +94,14 @@ pub enum Commands {
         #[arg(short, long)]
         entry: String,
     },
+    RemoveField {
+        #[arg(short, long, default_value = "vault.pwv")]
+        path: PathBuf,
+        #[arg(short, long)]
+        entry: String,
+        #[arg(short, long)]
+        label: String,
+    },
     Dump {
         #[arg(short, long, default_value = "vault.pwv")]
         path: PathBuf,

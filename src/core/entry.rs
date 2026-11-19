@@ -63,6 +63,19 @@ impl Entry {
     pub fn find_field(&self, label: &str) -> Option<&Field> {
         self.fields.iter().find(|f| f.label == label)
     }
+
+    pub fn remove_field(&mut self, label: &str) -> Result<Field, String> {
+        let pos = self
+            .fields
+            .iter()
+            .position(|f| f.label == label)
+            .ok_or_else(|| format!("Field not found: {}", label))?;
+
+        let removed = self.fields.remove(pos);
+        self.updated_at = current_timestamp();
+
+        Ok(removed)
+    }
 }
 
 fn current_timestamp() -> u64 {

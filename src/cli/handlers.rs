@@ -7,7 +7,8 @@ use serde::Serialize;
 
 use crate::cli::args::{FieldArg, OutputFormat};
 use crate::cli::dto::{
-    EntryCreatedDto, EntryDetailDto, EntrySummaryDto, FieldDto, VaultInitDto, VaultInspectDto,
+    EntryCreatedDto, EntryDetailDto, EntrySummaryDto, FieldDto, OperationSuccessDto, VaultInitDto,
+    VaultInspectDto,
 };
 use crate::core::entry::Entry;
 use crate::core::field::{Field, FieldValue};
@@ -348,6 +349,42 @@ pub fn handle_view(path: PathBuf, entry: String, format: OutputFormat) -> Result
             println!("{}", target_entry);
             Ok(())
         })
+    })
+}
+
+pub fn handle_remove_field(
+    path: PathBuf,
+    entry: String,
+    label: String,
+    format: OutputFormat,
+) -> Result<(), String> {
+    if entry.is_empty() {
+        return Err("You must provide an entry to remove from.".to_string());
+    }
+
+    if label.is_empty() {
+        return Err("You must provide a field label to remove.".to_string());
+    }
+
+    with_unlocked_vault_mut(&path, |vault| {
+        let target_entry = vault
+            .get_entry_mut(&entry)
+            .ok_or_else(|| format!("Cannot find entry in vault: {}", entry))?;
+        target_entry
+            .remove_field(&label)
+            .map_err(|e| format!("Failed to remove field: {}", e))?;
+
+        Ok(())
+    })?;
+
+    let dto = OperationSuccessDto {
+        status: "success",
+        message: format!("Successfully removed field '{}'", label),
+    };
+
+    render_output(format, &dto, || {
+        println!("Field successfully removed: {}", label);
+        Ok(())
     })
 }
 

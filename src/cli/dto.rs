@@ -73,3 +73,9 @@ pub struct VaultInitDto<'a> {
     pub name: &'a str,
     pub path: String,
 }
+
+#[derive(Serialize)]
+pub struct OperationSuccessDto<'a> {
+    pub status: &'a str,
+    pub message: String,
+}
