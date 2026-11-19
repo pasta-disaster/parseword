@@ -62,6 +62,21 @@ impl Vault {
             .iter_mut()
             .find(|e| e.title == title)
     }
+
+    pub fn remove_entry(&mut self, identifier: &str) -> Result<Entry, String> {
+        if self.is_locked() {
+            return Err("Cannot remove entry from a locked vault".to_string());
+        }
+
+        let entries = self.entries.as_mut().expect("unlocked vault has entries");
+
+        let pos = entries
+            .iter()
+            .position(|e| e.id == identifier || e.title == identifier)
+            .ok_or_else(|| format!("Entry not found: {}", identifier))?;
+
+        Ok(entries.remove(pos))
+    }
 }
 
 #[cfg(test)]

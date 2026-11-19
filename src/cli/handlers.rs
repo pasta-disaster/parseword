@@ -352,6 +352,36 @@ pub fn handle_view(path: PathBuf, entry: String, format: OutputFormat) -> Result
     })
 }
 
+pub fn handle_remove_entry(
+    path: PathBuf,
+    title: String,
+    format: OutputFormat,
+) -> Result<(), String> {
+    if title.is_empty() {
+        return Err("You must provide an entry title to remove.".to_string());
+    }
+
+    let target_title = title.clone();
+
+    with_unlocked_vault_mut(&path, |vault| {
+        vault
+            .remove_entry(&target_title)
+            .map_err(|e| format!("Failed to remove entry: {}", e))?;
+
+        Ok(())
+    })?;
+
+    let dto = OperationSuccessDto {
+        status: "success",
+        message: format!("Successfully removed entry '{}'", title),
+    };
+
+    render_output(format, &dto, || {
+        println!("Entry successfully removed: {}", title);
+        Ok(())
+    })
+}
+
 pub fn handle_remove_field(
     path: PathBuf,
     entry: String,

@@ -23,6 +23,7 @@ pub fn run() -> Result<(), String> {
             field_args,
         } => handle_add_field(path, entry, field_args, cli.format),
         Commands::View { path, entry } => handle_view(path, entry, cli.format),
+        Commands::RemoveEntry { path, title } => handle_remove_entry(path, title, cli.format),
         Commands::RemoveField { path, entry, label } => {
             handle_remove_field(path, entry, label, cli.format)
         }
