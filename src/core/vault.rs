@@ -20,6 +20,10 @@ impl Vault {
         }
     }
 
+    pub fn is_locked(&self) -> bool {
+        self.entries.is_none()
+    }
+
     pub fn unlock(&mut self, decrypted_entries: Vec<Entry>) {
         self.entries = Some(decrypted_entries);
         self.is_locked = false;
