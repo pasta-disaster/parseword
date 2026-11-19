@@ -91,23 +91,43 @@ mod tests {
     use crate::core::field::FieldValue;
 
     #[test]
-    fn test_entry_field_management() {
-        let mut entry = Entry::new(
-            "test-service-id",
-            "Test Service",
-            vec![Field::new(
-                "Username",
-                FieldValue::Text("test-username".into()),
-            )],
-        );
-        assert_eq!(entry.fields.len(), 1);
+    fn test_find_field() {
+        let mut entry = Entry::new("test-entry-id", "Test Entry", vec![]);
+        entry.add_field(Field::new(
+            "Test Field",
+            FieldValue::Text("Test field value".into()),
+        ));
+
+        assert!(entry.find_field("Test Field").is_some());
+    }
+
+    #[test]
+    fn test_add_field() {
+        let mut entry = Entry::new("test-entry-id", "Test Entry", vec![]);
+        assert_eq!(entry.fields.len(), 0);
 
         entry.add_field(Field::new(
-            "Password",
-            FieldValue::Password("test-password".into()),
+            "Test Field",
+            FieldValue::Text("Test field value".into()),
         ));
-        assert_eq!(entry.fields.len(), 2);
 
-        assert!(entry.find_field("Password").is_some());
+        assert_eq!(entry.fields.len(), 1);
+        assert!(entry.find_field("Test Field").is_some());
+    }
+
+    #[test]
+    fn test_remove_field() {
+        let mut entry = Entry::new("test-entry-id", "Test Entry", vec![]);
+        entry.add_field(Field::new(
+            "Test Field",
+            FieldValue::Text("Test field value".into()),
+        ));
+
+        assert_eq!(entry.fields.len(), 1);
+        let removed = entry
+            .remove_field("Test Field")
+            .expect("should remove existing field");
+        assert_eq!(entry.fields.len(), 0);
+        assert_eq!(removed.label, "Test Field");
     }
 }

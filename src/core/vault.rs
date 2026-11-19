@@ -86,14 +86,14 @@ mod tests {
 
     #[test]
     fn test_vault_starts_locked() {
-        let vault = Vault::new("v1".to_string(), "Test Vault");
+        let vault = Vault::new("vault-001", "Test Vault");
         assert!(vault.is_locked);
         assert!(vault.entries().is_none());
     }
 
     #[test]
     fn test_vault_unlock_and_lock() {
-        let mut vault = Vault::new("v1".to_string(), "Test Vault");
+        let mut vault = Vault::new("vault-001", "Test Vault");
 
         // unlock
         vault.unlock(Vec::new());
@@ -107,8 +107,8 @@ mod tests {
     }
 
     #[test]
-    fn test_add_entry_behaviour() {
-        let mut vault = Vault::new("vault-001".to_string(), "Test vault".to_string());
+    fn test_add_entry() {
+        let mut vault = Vault::new("vault-001", "Test vault");
         let entry = Entry::new(
             "entry-001",
             "Test Service",
@@ -124,5 +124,18 @@ mod tests {
         vault.unlock(Vec::new());
         assert!(vault.add_entry(entry).is_ok());
         assert_eq!(vault.entries().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_remove_entry() {
+        let mut vault = Vault::new("vault-001", "Test Vault");
+        let entry = Entry::new("entry-001", "Test Entry", vec![]);
+
+        assert!(vault.remove_entry("entry-001").is_err());
+
+        vault.unlock(vec![entry]);
+        assert!(vault.remove_entry("Test Entry").is_ok());
+        assert_eq!(vault.entries().unwrap().len(), 0);
+        assert!(vault.remove_entry("Test Entry").is_err());
     }
 }
